@@ -1,0 +1,24 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/logs/logs"
+  ],
+  "window": {
+    "backgroundTextStyle": "lignt",
+    "navigationBarBackgroundColor": "#fff",
+    "navigationBarTitleText": "密码生成器",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "list": [{
+      "pagePath": "pages/index/index",
+      "text": "保存",
+      "selectedColor": "#4876FF"
+    },
+    {
+      "pagePath": "pages/logs/logs",
+      "text": "查询",
+      "selectedColor": "#4876FF"
+    }]
+  }
+}

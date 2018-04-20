@@ -1,0 +1,23 @@
+<!--index.wxml-->
+<view class='container'>
+  <view style='margin-top:10px'>
+    <text>填写以下信息并保存:</text>
+  </view>
+  <view class='view' style='margin-top:20px'>
+    <text>应用名：</text>
+    <input type='text' maxlength='20' bindinput='bindKeyInput' placeholder='应用名,支持20位' auto-focus confirm-type='next'></input>
+  </view>
+  <view class='view'>
+    <text>用户名：</text>
+    <input type='text' maxlength='20' bindinput='bindNameInput' placeholder='用户名,最大支持20位' confirm-type='next'></input>
+  </view>
+  <view class='view'>
+    <text>密码：</text>
+    <input type="text" maxlength='20' bindinput='bindPassWordInput' placeholder='密码,长度最大20' confirm-type='next'></input>
+  </view>
+  <view class='view'>
+    <text>密钥串</text>
+    <input type='number' maxlength='20' bindinput='bindRandInput' placeholder='加密数字,长度最大20' confirm-type='done'></input>
+  </view>
+  <button class='genbutton' bindtap='genPassword'>保存</button>
+</view>
