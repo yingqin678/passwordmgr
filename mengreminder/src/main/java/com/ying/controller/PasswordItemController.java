@@ -2,7 +2,10 @@ package com.ying.controller;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.ying.domain.Password;
+import com.ying.domain.WXInfo;
 import com.ying.service.mybatis.PasswordMngservice;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -20,6 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/item")
@@ -36,17 +40,71 @@ public class PasswordItemController {
 
     private static String PASSWORD = "password";
 
+    private static String SESSION_KEY = "session_key";
+
+    private static Map<String, String> session_openId = new ConcurrentHashMap<String, String>();
+
+    private static Map<String, String> openId_session = new ConcurrentHashMap<String, String>();
+
+    @RequestMapping(value = "/auth", method = RequestMethod.POST)
+    public void auth(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        JSONObject body = getBodyString(request);
+        String code = body.getString(CODE);
+        if (StringUtils.isEmpty(code)) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+        WXInfo wxInfo = getopenid(code);
+        if (StringUtils.isEmpty(wxInfo.getOpenId())) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put(SESSION_KEY, wxInfo.getSession_Key());
+
+        openId_session.put(wxInfo.getOpenId(), wxInfo.getSession_Key());
+        session_openId.put(wxInfo.getSession_Key(), wxInfo.getOpenId());
+        renderData(response, jsonObject.toJSONString());
+    }
+
     @RequestMapping(value = "/add", method = RequestMethod.POST)
     public void addItem(HttpServletRequest request, HttpServletResponse response) throws IOException {
         JSONObject body = getBodyString(request);
-        passwordMngservice.addItem(getopenid(body.getString(CODE)), body.getString(APPNAME), body.getString(USERNAME), body.getString(PASSWORD));
+        Password password = new Password();
+        String session = body.getString(SESSION_KEY);
+        String appName = body.getString(APPNAME);
+        String userName = body.getString(USERNAME);
+        String pass = body.getString(PASSWORD);
+        if (StringUtils.isEmpty(session) || StringUtils.isEmpty(appName) || StringUtils.isEmpty(userName) || StringUtils.isEmpty(pass)) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+
+        password.setOpenId(session_openId.get(session));
+        password.setAppName(appName);
+        password.setUserName(userName);
+        password.setPassword(pass);
+
+        passwordMngservice.addItem(password);
     }
 
     @RequestMapping(value = "/query/app/name", method = RequestMethod.POST)
     public void queryAppName(HttpServletRequest request, HttpServletResponse response) throws IOException {
         JSONObject body = getBodyString(request);
 
-        List<String> appName = passwordMngservice.queryAppName(body.getString(CODE));
+        String session_key = body.getString(SESSION_KEY);
+        if (StringUtils.isEmpty(session_key)) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+        String openId = session_openId.get(session_key);
+        if (StringUtils.isEmpty(openId))
+        {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+
+        List<String> appName = passwordMngservice.queryAppName(openId);
 
         renderData(response, JSON.toJSONString(appName));
     }
@@ -54,17 +112,45 @@ public class PasswordItemController {
     @RequestMapping(value = "/query/user/name", method = RequestMethod.POST)
     public void queryUserName(HttpServletRequest request, HttpServletResponse response) throws IOException {
         JSONObject body = getBodyString(request);
+        String appName = body.getString(APPNAME);
 
-        List<String> userName = passwordMngservice.queryUserName(body.getString(CODE), body.getString(USERNAME));
+        String session_key = body.getString(SESSION_KEY);
+        if (StringUtils.isEmpty(session_key)) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+        String openId = session_openId.get(session_key);
+        if (StringUtils.isEmpty(openId))
+        {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+        List<String> userNames = passwordMngservice.queryUserName(openId, appName);
 
-        renderData(response, JSON.toJSONString(userName));
+        renderData(response, JSON.toJSONString(userNames));
     }
 
     @RequestMapping(value = "/query/password", method = RequestMethod.POST)
     public void queryPassword(HttpServletRequest request, HttpServletResponse response) throws IOException {
         JSONObject body = getBodyString(request);
-
-        String password = passwordMngservice.queryPassword(body.getString(CODE), body.getString(APPNAME), body.getString(USERNAME));
+        String appName = body.getString(APPNAME);
+        String userName = body.getString(USERNAME);
+        if (StringUtils.isEmpty(appName) || StringUtils.isEmpty(userName)) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+        String session_key = body.getString(SESSION_KEY);
+        if (StringUtils.isEmpty(session_key)) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+        String openId = session_openId.get(session_key);
+        if (StringUtils.isEmpty(openId))
+        {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+        String password = passwordMngservice.queryPassword(openId, appName  , userName);
 
         renderData(response, password);
     }
@@ -83,8 +169,7 @@ public class PasswordItemController {
         BufferedReader bufferedReader = request.getReader();
 
         String body = "", temp;
-        while ((temp = bufferedReader.readLine()) != null)
-        {
+        while ((temp = bufferedReader.readLine()) != null) {
             body += temp;
         }
 
@@ -111,10 +196,10 @@ public class PasswordItemController {
         }
     }
 
-    private String getopenid(String code){
+    private WXInfo getopenid(String code) {
 
-        String requestUrl =  "https://api.weixin.qq.com/sns/jscode2session";
-        Map<String,String> requestUrlParam = new HashMap<String,String>();
+        String requestUrl = "https://api.weixin.qq.com/sns/jscode2session";
+        Map<String, String> requestUrlParam = new HashMap<String, String>();
         requestUrlParam.put("appid", "wx74ff0bb7e4cf6afc");  //开发者设置中的appId
         requestUrlParam.put("secret", "4f0271d286732c4fed936bce47f7688e"); //开发者设置中的appSecret
         requestUrlParam.put("js_code", code); //小程序调用wx.login返回的code
@@ -122,7 +207,10 @@ public class PasswordItemController {
 
         //发送post请求读取调用微信 https://api.weixin.qq.com/sns/jscode2session 接口获取openid用户唯一标识
         JSONObject jsonObject = JSON.parseObject(sendPost(requestUrl, requestUrlParam));
-        return jsonObject.getString("openid");
+        WXInfo info = new WXInfo();
+        info.setOpenId(jsonObject.getString("openid"));
+        info.setSession_Key(jsonObject.getString("session_key"));
+        return info;
     }
 
     private String sendPost(String url, Map<String, ?> paramMap) {
@@ -133,7 +221,7 @@ public class PasswordItemController {
         String param = "";
         Iterator<String> it = paramMap.keySet().iterator();
 
-        while(it.hasNext()) {
+        while (it.hasNext()) {
             String key = it.next();
             param += key + "=" + paramMap.get(key) + "&";
         }
@@ -166,16 +254,15 @@ public class PasswordItemController {
             e.printStackTrace();
         }
         //使用finally块来关闭输出流、输入流
-        finally{
-            try{
-                if(out!=null){
+        finally {
+            try {
+                if (out != null) {
                     out.close();
                 }
-                if(in!=null){
+                if (in != null) {
                     in.close();
                 }
-            }
-            catch(IOException ex){
+            } catch (IOException ex) {
                 ex.printStackTrace();
             }
         }

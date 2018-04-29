@@ -1,16 +1,19 @@
 package com.ying.service.mybatis;
 
+import com.ying.domain.Password;
+import org.apache.ibatis.annotations.Param;
+
 import java.util.List;
 
 public interface PasswordMngservice {
 
-    void addItem(String openId, String appName, String userName, String password);
+    void addItem(Password password);
 
-    List<String> queryAppName(String openId);
+    List<String> queryAppName(@Param("openId") String openId);
 
-    List<String> queryUserName(String openId, String appName);
+    List<String> queryUserName(@Param("openId") String openId, @Param("appName") String appName);
 
-    String queryPassword(String openId, String appName, String userName);
+    String queryPassword(@Param("openId") String openId, @Param("appName") String appName, @Param("userName") String userName);
 
     void modifyItem();
 

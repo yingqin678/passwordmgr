@@ -1,3 +1,5 @@
-/Users/yingmeng/IdeaProjects/mengreminder/src/main/java/com/ying/ApplicationMain.java
-/Users/yingmeng/IdeaProjects/mengreminder/src/main/java/com/ying/controller/PasswordItemController.java
-/Users/yingmeng/IdeaProjects/mengreminder/src/main/java/com/ying/service/mybatis/PasswordMngservice.java
+/Users/yingmeng/Documents/开发相关/小程序/passwordmgr/mengreminder/src/main/java/com/ying/domain/Password.java
+/Users/yingmeng/Documents/开发相关/小程序/passwordmgr/mengreminder/src/main/java/com/ying/domain/WXInfo.java
+/Users/yingmeng/Documents/开发相关/小程序/passwordmgr/mengreminder/src/main/java/com/ying/service/mybatis/PasswordMngservice.java
+/Users/yingmeng/Documents/开发相关/小程序/passwordmgr/mengreminder/src/main/java/com/ying/controller/PasswordItemController.java
+/Users/yingmeng/Documents/开发相关/小程序/passwordmgr/mengreminder/src/main/java/com/ying/ApplicationMain.java
